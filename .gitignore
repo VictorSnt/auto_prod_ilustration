@@ -3,3 +3,4 @@
 \venv
 \produtos
 \Configuration\profile
+\Configuration\__pycache__
