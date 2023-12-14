@@ -1,4 +1,5 @@
 \Configuration\settings.json
 \queries.py
 \venv
-\produtos\*
+\produtos
+\Configuration\profile
