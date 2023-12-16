@@ -1,8 +1,9 @@
 from Configuration.DbConection.DbConnect import DbConnection
 from Configuration.DbConection.queries import products_query, get_all_groups_query
-from img_inserter.playwright.photo_scrap import download_prod_img
+from img_inserter.playwright_lib.photo_scrap import download_prod_img
 
 from dotenv import load_dotenv
+from itertools import chain
 from pathlib import Path
 import asyncio
 import os
@@ -36,24 +37,28 @@ async def init_async():
                 if not any(char in group_row.get('nmgrupo', '') for char in ['@', '*'])
             ]
         
-        for group in active_groups:
-            
-            prod_query = products_query.format(group['idgrupo'])
-            prods_response = db_conn.sqlquery(query=prod_query) 
+        all_prods_by_group = [
+            db_conn.sqlquery(products_query.format(group['idgrupo'])) 
+                for group in active_groups 
+                    if db_conn.sqlquery(products_query.format(group['idgrupo']))
+            ]
+               
+        all_prods_by_group_flat = list(chain.from_iterable(all_prods_by_group))
 
-            if not prods_response: continue
-            
-            for res in prods_response:
+        for prod in all_prods_by_group_flat:
 
-                prod_name: str = res['dsdetalhe']
-                prod_id: str = res['iddetalhe']
-                
-                if not downloaded_photos.get(prod_id, False):
-                    try:
-                        await download_prod_img(downloads_folder, prod_name, prod_id)
-                    except TimeoutError as e:
-                        print(e)
-                        continue
+            prod_name: str = prod['dsdetalhe']
+            prod_id: str = prod['iddetalhe']
+            
+            if not downloaded_photos.get(prod_id, False):
+
+                try:
+                    await download_prod_img(downloads_folder, prod_name, prod_id)
+
+                except TimeoutError as e:
+                    
+                    print(e)
+                    continue
         
 
 if __name__ == '__main__':
